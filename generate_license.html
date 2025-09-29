@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>授权码生成</title>
+    <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.1.1/crypto-js.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f6f8fa;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 400px;
+            margin: 60px auto;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            padding: 32px 28px 24px 28px;
+        }
+        h2 {
+            text-align: center;
+            color: #2d3748;
+            margin-bottom: 24px;
+        }
+        label {
+            display: block;
+            margin-bottom: 12px;
+            color: #4a5568;
+            font-size: 15px;
+        }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            font-size: 15px;
+            margin-top: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            background: linear-gradient(90deg,#4299e1,#3182ce);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 0;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 18px;
+            box-shadow: 0 2px 8px rgba(66,153,225,0.08);
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: linear-gradient(90deg,#3182ce,#4299e1);
+        }
+        .result {
+            margin-top: 22px;
+            font-weight: bold;
+            color: #3182ce;
+            font-size: 17px;
+            word-break: break-all;
+            text-align: center;
+            background: #ebf8ff;
+            border-radius: 8px;
+            padding: 12px 8px;
+        }
+        @media (max-width: 500px) {
+            .container { max-width: 98vw; padding: 18px 6vw; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>授权码生成</h2>
+        <label>序列号（设备ID）
+            <input type="text" id="deviceId" value="test123" placeholder="请输入设备ID" />
+        </label>
+        <label>授权天数
+            <input type="number" id="days" value="30" min="1" placeholder="如30" />
+            <input type="checkbox" id="permanent" style="margin-left:8px;vertical-align:middle;" onclick="togglePermanent()">永久
+        </label>
+        <button onclick="generateLicense()">生成授权码</button>
+        <div class="result" id="licenseResult"></div>
+        <div style="margin-top:18px;color:#718096;font-size:13px;text-align:center;">* 授权码由设备ID和天数加密生成，安全且唯一</div>
+    </div>
+    <script>
+        function togglePermanent() {
+            const permanent = document.getElementById('permanent').checked;
+            const daysInput = document.getElementById('days');
+            if (permanent) {
+                daysInput.value = 9999;
+                daysInput.disabled = true;
+            } else {
+                daysInput.disabled = false;
+            }
+        }
+        // 与KT算法完全一致
+        const SECRET_KEY = "K0TL1N_L1C3NS3_K3Y";
+        const LICENSE_LENGTH = 20; // 可改为30
+        function padEnd(str, len, ch) {
+            while (str.length < len) str += ch;
+            return str;
+        }
+        function formatLicense(license) {
+            if (license.length > LICENSE_LENGTH) return license.substring(0, LICENSE_LENGTH);
+            if (license.length < LICENSE_LENGTH) return padEnd(license, LICENSE_LENGTH, 'X');
+            return license;
+        }
+        function calculateChecksum(data) {
+            let bytes = Array.from(data).map(c => c.charCodeAt(0));
+            let sum = 0;
+            for (let b of bytes) sum = (sum + b) & 0xFF;
+            return sum.toString(16).padStart(2, '0').toUpperCase();
+        }
+        function generateLicense() {
+            const deviceId = document.getElementById('deviceId').value;
+            const days = document.getElementById('days').value;
+            const licenseInfo = deviceId + ':' + days + ':' + Date.now();
+            // AES加密
+            let key = CryptoJS.SHA256(SECRET_KEY).toString(CryptoJS.enc.Hex).substring(0, 32);
+            let encrypted = CryptoJS.AES.encrypt(licenseInfo, CryptoJS.enc.Hex.parse(key), {
+                mode: CryptoJS.mode.ECB,
+                padding: CryptoJS.pad.Pkcs7
+            });
+            let base64License = encrypted.toString();
+            let checksum = calculateChecksum(base64License);
+            let license = formatLicense(base64License + checksum);
+            document.getElementById('licenseResult').innerText = '授权码: ' + license;
+        }
+    </script>
+</body>
+</html>
