@@ -149,10 +149,10 @@
                 mode: CryptoJS.mode.ECB,
                 padding: CryptoJS.pad.Pkcs7
             });
-            let base64License = encrypted.toString();
-            let checksum = calculateChecksum(base64License);
-            let license = formatLicense(base64License + checksum);
-            document.getElementById('licenseResult').innerText = '授权码: ' + license;
+            // 取密文的16进制字符串
+            let hexLicense = encrypted.ciphertext.toString(CryptoJS.enc.Hex);
+            let license = formatLicense(hexLicense);
+            document.getElementById('licenseResult').innerText = '授权码: ' + license.toUpperCase();
         }
     </script>
 </body>
